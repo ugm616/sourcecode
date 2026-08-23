@@ -1,4 +1,4 @@
-// ai.js - OpenRouter chat client for the Ox Alpha agent
+// ai.js - OpenRouter streaming chat client for the Ox Alpha agent
 "use strict";
 
 const AI = (() => {
@@ -35,12 +35,13 @@ OUTPUT RULES (very important):
   }
 
   /**
-   * Send the conversation to the model.
+   * Send the conversation to the model (streaming).
    * history: [{role, content}] (user/assistant only)
    * contextFiles: [{path, content}]
+   * onProgress: optional callback ({content, reasoning}) called as chunks arrive
    * Returns {text, filesChanged:[{path,content}]}
    */
-  async function chat({ apiKey, model, history, userMessage, contextFiles }) {
+  async function chat({ apiKey, model, history, userMessage, contextFiles, onProgress }) {
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...history.slice(-20),
@@ -56,7 +57,8 @@ OUTPUT RULES (very important):
       body: JSON.stringify({
         model: model || DEFAULT_MODEL,
         messages,
-        temperature: 0.3
+        temperature: 0.3,
+        stream: true
       })
     });
 
@@ -69,10 +71,69 @@ OUTPUT RULES (very important):
       throw new Error(`OpenRouter ${res.status}: ${detail || res.statusText}`);
     }
 
-    const data = await res.json();
-    const choice = data.choices && data.choices[0];
-    const text = choice ? (choice.message.content || "") : "";
-    return { text, filesChanged: extractFileBlocks(text) };
+    // ---- consume the SSE stream ----
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";     // visible answer text
+    let reasoning = "";   // hidden chain-of-thought, if the model emits one
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();   // keep incomplete trailing line
+
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith("data:")) continue;   // skips ": OPENROUTER PROCESSING" comments too
+        const payload = t.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let json;
+        try { json = JSON.parse(payload); } catch { continue; }
+        const delta = json.choices && json.choices[0] && json.choices[0].delta;
+        if (!delta) continue;
+        if (typeof delta.reasoning === "string") reasoning += delta.reasoning;
+        if (typeof delta.content === "string") content += delta.content;
+      }
+
+      if (onProgress) onProgress({ content, reasoning });
+    }
+
+    return { text: content, filesChanged: extractFileBlocks(content), reasoning };
+  }
+
+  /**
+   * Turn the raw stream state into a short human-readable status line,
+   * e.g. "Thinking: comparing the two approaches..." or "Writing src/app.js..."
+   */
+  function describeProgress({ content, reasoning }) {
+    const TAIL_LEN = 64;
+
+    const tail = (s) => {
+      const flat = s.replace(/\s+/g, " ").trim();
+      return flat.length <= TAIL_LEN ? `\u201C${flat}\u201D` : `\u201C\u2026${flat.slice(-TAIL_LEN)}\u201D`;
+    };
+
+    // find the most recently named file block
+    let lastFile = null;
+    const re = /```(?:file|create|update)[ \t]+([^\n`]+)/g;
+    let m;
+    while ((m = re.exec(content)) !== null) lastFile = m[1].trim();
+
+    const fenceCount = (content.match(/```/g) || []).length;
+    const insideFence = fenceCount % 2 === 1;
+
+    if (insideFence && lastFile) return `Writing ${lastFile}\u2026`;
+    if (!insideFence && lastFile) return `Saved ${lastFile}`;
+
+    if (!content.trim()) {
+      if (reasoning.trim()) return `Thinking: ${tail(reasoning)}`;
+      return "Waiting for first tokens\u2026";
+    }
+
+    return `Composing: ${tail(content)}`;
   }
 
   // Parse ```file path/to/file ...``` blocks from an assistant message
@@ -93,5 +154,5 @@ OUTPUT RULES (very important):
     return out;
   }
 
-  return { chat, extractFileBlocks, DEFAULT_MODEL };
+  return { chat, describeProgress, extractFileBlocks, DEFAULT_MODEL };
 })();

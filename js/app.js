@@ -251,20 +251,23 @@ const App = (() => {
     $("#btn-send").disabled = true;
     const statusEl = $("#chat-status");
     statusEl.classList.remove("hidden");
-    statusEl.textContent = "Thinking...";
+    statusEl.textContent = "Contacting model\u2026";
 
     try {
       const contextMode = $("#context-mode").value;
       const contextFiles = getContextFiles(contextMode);
-      statusEl.textContent =
-        `Asking ${s.model} (${contextFiles.length} file${contextFiles.length === 1 ? "" : "s"} of context)...`;
+      const fileCount = contextFiles.length;
 
       const { text: reply, filesChanged } = await AI.chat({
         apiKey: s.apiKey,
         model: s.model,
         history: chatHistory,
         userMessage: text,
-        contextFiles
+        contextFiles,
+        onProgress: (state) => {
+          statusEl.textContent =
+            `${AI.describeProgress(state)}  \u00b7  ${s.model}, ${fileCount} file${fileCount === 1 ? "" : "s"} of context`;
+        }
       });
 
       // apply file changes to the workspace
