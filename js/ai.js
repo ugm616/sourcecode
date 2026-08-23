@@ -154,5 +154,14 @@ OUTPUT RULES (very important):
     return out;
   }
 
-  return { chat, describeProgress, extractFileBlocks, DEFAULT_MODEL };
+  // Remove ```file ...``` blocks from a message so the chat log stays readable.
+  // Returns the prose + any small non-file code excerpts that remain.
+  function stripFileBlocks(text) {
+    return text
+      .replace(/```(?:file|create|update)[ \t]+[^\n`]+\n[\s\S]*?```/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  return { chat, describeProgress, extractFileBlocks, stripFileBlocks, DEFAULT_MODEL };
 })();

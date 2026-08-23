@@ -272,6 +272,7 @@ const App = (() => {
 
       // apply file changes to the workspace
       let appliedNote = "";
+      const displayText = AI.stripFileBlocks(reply) || "(wrote files, see below)";
       if (filesChanged.length) {
         for (const change of filesChanged) {
           const normPath = change.path.replace(/^\.?\//, "");
@@ -289,9 +290,10 @@ const App = (() => {
         }</div>`;
       }
 
-      appendMsg("assistant", reply, appliedNote);
+      appendMsg("assistant", displayText, appliedNote);
       chatHistory.push({ role: "user", content: text });
-      chatHistory.push({ role: "assistant", content: reply });
+      // keep only the prose in history: files are re-sent as workspace context
+      chatHistory.push({ role: "assistant", content: displayText });
       persistChat();
       setStatusLeft(filesChanged.length ? `AI updated ${filesChanged.length} file(s)` : "Ready");
     } catch (e) {
