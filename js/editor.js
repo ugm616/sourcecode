@@ -47,6 +47,7 @@ const Editor = (() => {
       automaticLayout: true,
       minimap: { enabled: true },
       fontSize: 14,
+      fontFamily: '"Courier New", Courier, monospace',
       wordWrap: "on",
       renderWhitespace: "selection"
     });
