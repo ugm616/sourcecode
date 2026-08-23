@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SourceCode</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&lt;/&gt;</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Top bar ===== -->
+  <header id="topbar">
+    <div class="brand" title="SourceCode">&lt;/&gt; SourceCode</div>
+    <div class="topbar-actions">
+      <button id="btn-new-file" class="tb-btn" title="New file">+ File</button>
+      <button id="btn-save-disk" class="tb-btn" title="Save project to your hard drive">Save to Disk</button>
+      <button id="btn-github" class="tb-btn" title="Commit project to GitHub">GitHub&#9662;</button>
+      <button id="btn-export" class="tb-btn" title="Export tabs / session">&#8681; Export</button>
+      <button id="btn-import" class="tb-btn" title="Import session file">&#8679; Import</button>
+      <input type="file" id="import-file" accept=".json,.sourcecode,.srcz,.gz" hidden>
+      <button id="btn-settings" class="tb-btn" title="Settings">&#9881; Settings</button>
+    </div>
+  </header>
+
+  <!-- ===== Main area ===== -->
+  <main id="main">
+
+    <!-- Sidebar: file explorer -->
+    <aside id="sidebar">
+      <div class="panel-title">EXPLORER
+        <span class="spacer"></span>
+        <button id="btn-refresh-tree" class="mini-btn" title="Refresh">&#8635;</button>
+        <button id="btn-new-folder" class="mini-btn" title="New folder">+&#128193;</button>
+        <button id="btn-new-file-side" class="mini-btn" title="New file">+&#128196;</button>
+      </div>
+      <div id="file-tree"></div>
+    </aside>
+
+    <div id="sidebar-resizer"></div>
+
+    <!-- Editor column -->
+    <section id="editor-col">
+      <div id="tabstrip"></div>
+      <div id="editor-container"></div>
+      <div id="welcome" class="hidden">
+        <h1>&lt;/&gt; SourceCode</h1>
+        <p>Your browser-based coding workspace, powered by Ox&nbsp;Alpha via OpenRouter.</p>
+        <ul>
+          <li>Create a file with <b>+ File</b>, then just start coding.</li>
+          <li>Ask the AI agent on the right to write or change code for you.</li>
+          <li>Everything is stored locally and auto-saved.</li>
+          <li><b>Export</b> your session before closing the tab.</li>
+        </ul>
+      </div>
+    </section>
+
+    <div id="chat-resizer"></div>
+
+    <!-- AI chat panel -->
+    <aside id="chat-panel">
+      <div class="panel-title">AI AGENT
+        <span class="spacer"></span>
+        <select id="context-mode" title="What context to send with each message">
+          <option value="active">Active file</option>
+          <option value="all">All files</option>
+          <option value="none">No files</option>
+        </select>
+        <button id="btn-clear-chat" class="mini-btn" title="Clear conversation">&#128465;</button>
+      </div>
+      <div id="chat-log"></div>
+      <div id="chat-status" class="hidden"></div>
+      <div id="chat-input-row">
+        <textarea id="chat-input" rows="3" placeholder="Describe what you want to build or change... (Enter to send, Shift+Enter for newline)"></textarea>
+        <button id="btn-send" title="Send">&#10148;</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="statusbar">
+    <span id="status-left">Ready</span>
+    <span class="spacer"></span>
+    <span id="status-model"></span>
+    <span id="status-conn" class="warn">No API key &#8212; open Settings</span>
+  </footer>
+</div>
+
+<!-- ===== Settings modal ===== -->
+<dialog id="settings-modal">
+  <form method="dialog" id="settings-form">
+    <h2>Settings</h2>
+    <label>OpenRouter API key
+      <input type="password" id="set-apikey" placeholder="sk-or-v1-..." autocomplete="off">
+      <small>Free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Stored only in your browser's localStorage.</small>
+    </label>
+    <label>Model ID
+      <input type="text" id="set-model" placeholder="stealth/ox-alpha">
+      <small>Default: <code>stealth/ox-alpha</code> (Ox Alpha Free). Change it if pricing or availability changes.</small>
+    </label>
+    <hr>
+    <label>GitHub token (fine-grained PAT with <b>Contents: Read &amp; Write</b>)
+      <input type="password" id="set-ghtoken" placeholder="github_pat_... or ghp_..." autocomplete="off">
+    </label>
+    <label>Repository (owner/name)
+      <input type="text" id="set-ghrepo" placeholder="e.g. myuser/my-project">
+    </label>
+    <label>Branch
+      <input type="text" id="set-ghbranch" placeholder="main">
+    </label>
+    <menu>
+      <button value="cancel" class="btn">Cancel</button>
+      <button value="ok" class="btn primary" id="btn-settings-save">Save</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- ===== Export modal ===== -->
+<dialog id="export-modal">
+  <h2>Export session</h2>
+  <p>Download your open tabs and all project files so you can restore progress later.</p>
+  <div class="export-options">
+    <button id="btn-export-json" class="btn">Readable JSON (.json)</button>
+    <button id="btn-export-compressed" class="btn primary">Compressed (.sourcecode)</button>
+  </div>
+  <small>Gzip-compressed JSON &mdash; much smaller for big projects. Both formats can be re-imported.</small>
+  <menu><button value="close" class="btn">Close</button></menu>
+</dialog>
+
+<!-- ===== GitHub menu modal ===== -->
+<dialog id="github-modal">
+  <h2>Push to GitHub</h2>
+  <p id="gh-summary"></p>
+  <p class="muted small">Commits every file in the workspace to branch <b id="gh-branch-name"></b>. Configure token/repo in Settings first.</p>
+  <menu>
+    <button value="cancel" class="btn">Cancel</button>
+    <button id="btn-gh-push" class="btn primary">Commit &amp; Push</button>
+  </menu>
+</dialog>
+
+<script src="js/storage.js"></script>
+<script src="js/io.js"></script>
+<script src="js/github.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
