@@ -42,15 +42,15 @@ OUTPUT RULES (very important):
    * Returns {text, filesChanged:[{path,content}]}
    */
   async function chat({ apiKey, model, history, userMessage, contextFiles, permanentPrompts, onProgress }) {
-    const finalUserMessage = permanentPrompts
-      ? `[Project instructions]\n${permanentPrompts}\n\n${userMessage}`
-      : userMessage;
+    const systemContent = permanentPrompts
+      ? `${SYSTEM_PROMPT}\n\n[Project instructions]\n${permanentPrompts}`
+      : SYSTEM_PROMPT;
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemContent },
       ...history.slice(-20),
       {
         role: "user",
-        content: `${finalUserMessage}\n\n[Workspace files for reference]\n${contextBlock(contextFiles)}`
+        content: `${userMessage}\n\n[Workspace files for reference]\n${contextBlock(contextFiles)}`
       }
     ];
 

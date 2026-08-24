@@ -471,7 +471,11 @@ const App = (() => {
       await Store.putFile(PROMPT_FILES[i], content);
       const existing = files.find((f) => f.path === PROMPT_FILES[i]);
       if (existing) {
-        existing.content = content;
+        if (content.trim()) {
+          existing.content = content;
+        } else {
+          files.splice(files.indexOf(existing), 1);
+        }
       } else if (content.trim()) {
         files.push({ path: PROMPT_FILES[i], content });
         files.sort((a, b) => a.path.localeCompare(b.path));
