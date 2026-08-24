@@ -480,6 +480,7 @@ const App = (() => {
   async function importUploadEntries(entries) {
     if (!entries.length) return;
     let importedCount = 0;
+    const importedPaths = [];
     for (const { path, content } of entries) {
       if (!path) continue;
       const existing = files.find((f) => f.path === path);
@@ -487,11 +488,12 @@ const App = (() => {
       if (existing) existing.content = content;
       else files.push({ path, content });
       await Store.putFile(path, content);
+      importedPaths.push(path);
       importedCount++;
     }
     files.sort((a, b) => a.path.localeCompare(b.path));
     renderTree();
-    for (const { path } of entries) {
+    for (const path of importedPaths) {
       const f = files.find((x) => x.path === path);
       if (f) Editor.openTab(f.path, f.content);
     }
