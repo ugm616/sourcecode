@@ -72,6 +72,14 @@ body {
   background: var(--accent-glow); transform: translateY(-1px);
 }
 .tb-btn:active { transform: translateY(0); }
+#btn-upload { background: linear-gradient(135deg, #3a5a8a, #4a6fa0); }
+#btn-upload:hover { filter: brightness(1.15); }
+
+/* Sidebar drag-and-drop target */
+#sidebar.drag-over {
+  outline: 2px dashed var(--accent);
+  background: rgba(93, 125, 242, 0.08);
+}
 
 /* ================= Main layout ================= */
 #main { display: flex; flex: 1; min-height: 0; }
