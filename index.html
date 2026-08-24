@@ -28,6 +28,7 @@
       <button id="btn-upload" class="tb-btn" title="Upload files or folders">&#8679; Upload&#9662;</button>
       <input type="file" id="upload-files" multiple hidden>
       <input type="file" id="upload-folder" webkitdirectory directory hidden>
+      <button id="btn-prompts" class="tb-btn" title="Edit project prompts">&#128196; Prompts</button>
       <button id="btn-settings" class="tb-btn" title="Settings">&#9881; Settings</button>
     </div>
   </header>
@@ -143,6 +144,26 @@
   <menu>
     <button value="cancel" class="btn">Cancel</button>
     <button id="btn-gh-push" class="btn primary">Commit &amp; Push</button>
+  </menu>
+</dialog>
+
+<!-- ===== Prompts modal ===== -->
+<dialog id="prompts-modal">
+  <h2>Project Prompts</h2>
+  <p class="muted small">These files are automatically included in every AI chat context.</p>
+  <div id="prompt-tabs" class="tab-strip">
+    <button class="tab-btn active" data-index="0">DESIGN.md</button>
+    <button class="tab-btn" data-index="1">SPEC.md</button>
+    <button class="tab-btn" data-index="2">NOTES.md</button>
+  </div>
+  <textarea id="prompt-editor" rows="16" placeholder="Write your prompt here\u2026"></textarea>
+  <div class="prompt-file-row">
+    <button id="btn-load-prompt-file" class="mini-btn">&#8679; Load from file</button>
+    <input type="file" id="upload-prompt" accept=".md" hidden>
+  </div>
+  <menu>
+    <button value="cancel" class="btn" id="btn-prompts-close">Close</button>
+    <button class="btn primary" id="btn-prompts-save">Save</button>
   </menu>
 </dialog>
 

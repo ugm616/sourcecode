@@ -309,3 +309,21 @@ dialog menu {
   #chat-panel { width: 280px; }
   .brand { letter-spacing: 1.5px; font-size: 13px; }
 }
+
+/* ===== Prompts modal ===== */
+.tab-strip { display: flex; gap: 4px; margin-bottom: 10px; }
+.tab-btn {
+  padding: 5px 14px; font-size: 12px; font-family: var(--mono);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--fg-dim); cursor: pointer;
+}
+.tab-btn:hover { color: var(--fg); border-color: var(--fg-dim); }
+.tab-btn.active { color: var(--accent); border-color: var(--accent); background: var(--bg-panel); }
+#prompt-editor {
+  width: 100%; box-sizing: border-box; min-height: 240px; resize: vertical;
+  background: var(--bg); border: 1px solid var(--border); color: var(--fg);
+  font-family: var(--mono); font-size: 13px; padding: 10px; border-radius: var(--radius);
+}
+#prompt-editor:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.prompt-file-row { margin: 8px 0 4px; }
+#prompts-modal { width: min(680px, 92vw); }

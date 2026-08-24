@@ -6,6 +6,10 @@ const App = (() => {
   let chatHistory = [];    // [{role, content}] user/assistant only
   let busy = false;
 
+  const PROMPT_FILES = ["DESIGN.md", "SPEC.md", "NOTES.md"];
+  let activePromptIndex = 0;
+  let promptDrafts = ["", "", ""];
+
   const $ = (sel) => document.querySelector(sel);
 
   // ================= toasts =================
@@ -272,12 +276,18 @@ const App = (() => {
       const contextFiles = getContextFiles(contextMode);
       const fileCount = contextFiles.length;
 
+      const permanentPrompts = PROMPT_FILES
+        .map((name) => { const f = files.find((x) => x.path === name); return f ? f.content.trim() : ""; })
+        .filter(Boolean)
+        .join("\n\n");
+
       const { text: reply, filesChanged } = await AI.chat({
         apiKey: s.apiKey,
         model: s.model,
         history: chatHistory,
         userMessage: text,
         contextFiles,
+        permanentPrompts,
         onProgress: (state) => {
           statusEl.textContent =
             `${AI.describeProgress(state)}  \u00b7  ${s.model}, ${fileCount} file${fileCount === 1 ? "" : "s"} of context`;
@@ -433,6 +443,48 @@ const App = (() => {
         setStatusLeft("Ready");
       }
     }
+  }
+
+  // ================= prompts =================
+  async function openPromptsModal() {
+    for (let i = 0; i < PROMPT_FILES.length; i++) {
+      const f = files.find((x) => x.path === PROMPT_FILES[i]);
+      promptDrafts[i] = f ? f.content : (await Store.getFile(PROMPT_FILES[i]) || "");
+    }
+    activePromptIndex = 0;
+    renderPromptTabs();
+    $("#prompt-editor").value = promptDrafts[0];
+    $("#prompts-modal").showModal();
+  }
+
+  function renderPromptTabs() {
+    document.querySelectorAll("#prompt-tabs .tab-btn").forEach((btn) => {
+      btn.classList.toggle("active", parseInt(btn.dataset.index, 10) === activePromptIndex);
+    });
+  }
+
+  async function savePromptsModal() {
+    // save current textarea into draft before writing
+    promptDrafts[activePromptIndex] = $("#prompt-editor").value;
+    for (let i = 0; i < PROMPT_FILES.length; i++) {
+      const content = promptDrafts[i];
+      await Store.putFile(PROMPT_FILES[i], content);
+      const existing = files.find((f) => f.path === PROMPT_FILES[i]);
+      if (existing) {
+        if (content.trim()) {
+          existing.content = content;
+        } else {
+          files.splice(files.indexOf(existing), 1);
+        }
+      } else if (content.trim()) {
+        files.push({ path: PROMPT_FILES[i], content });
+        files.sort((a, b) => a.path.localeCompare(b.path));
+      }
+    }
+    renderTree();
+    renderTabs();
+    $("#prompts-modal").close();
+    toast("Prompts saved", "ok");
   }
 
   // ================= github =================
@@ -603,6 +655,26 @@ const App = (() => {
     });
 
     $("#btn-settings").addEventListener("click", openSettings);
+    $("#btn-prompts").addEventListener("click", openPromptsModal);
+    $("#btn-prompts-save").addEventListener("click", savePromptsModal);
+    $("#btn-prompts-close").addEventListener("click", () => $("#prompts-modal").close());
+    document.querySelectorAll("#prompt-tabs .tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        promptDrafts[activePromptIndex] = $("#prompt-editor").value;
+        activePromptIndex = parseInt(btn.dataset.index, 10);
+        renderPromptTabs();
+        $("#prompt-editor").value = promptDrafts[activePromptIndex];
+      });
+    });
+    $("#btn-load-prompt-file").addEventListener("click", () => $("#upload-prompt").click());
+    $("#upload-prompt").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        promptDrafts[activePromptIndex] = await file.text();
+        $("#prompt-editor").value = promptDrafts[activePromptIndex];
+      }
+      e.target.value = "";
+    });
     $("#btn-settings-save").addEventListener("click", (e) => {
       // dialog form submit handles closing; just save values
       saveSettingsFromForm();

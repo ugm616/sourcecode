@@ -41,9 +41,12 @@ OUTPUT RULES (very important):
    * onProgress: optional callback ({content, reasoning}) called as chunks arrive
    * Returns {text, filesChanged:[{path,content}]}
    */
-  async function chat({ apiKey, model, history, userMessage, contextFiles, onProgress }) {
+  async function chat({ apiKey, model, history, userMessage, contextFiles, permanentPrompts, onProgress }) {
+    const systemContent = permanentPrompts
+      ? `${SYSTEM_PROMPT}\n\n[Project instructions]\n${permanentPrompts}`
+      : SYSTEM_PROMPT;
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: systemContent },
       ...history.slice(-20),
       {
         role: "user",
