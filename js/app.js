@@ -223,12 +223,25 @@ const App = (() => {
     return div;
   }
 
+  async function refreshFiles() {
+    // IndexedDB is the source of truth, but the editor may hold unsaved edits.
+    const stored = await Store.listFiles();
+    files = stored.map((f) => {
+      const live = Editor.getContent(f.path);
+      return { path: f.path, content: live !== null ? live : f.content };
+    });
+  }
+
   function getContextFiles(mode) {
     if (mode === "none") return [];
     if (mode === "all") return files;
     const active = Editor.activePath;
+    if (!active) return [];
+    const live = Editor.getContent(active);
     const f = files.find((x) => x.path === active);
-    return f ? [f] : [];
+    if (live === null && !f) return [];
+    const content = live !== null ? live : f.content;
+    return [{ path: active, content }];
   }
 
   async function sendMessage() {
@@ -254,6 +267,7 @@ const App = (() => {
     statusEl.textContent = "Contacting model\u2026";
 
     try {
+      await refreshFiles();
       const contextMode = $("#context-mode").value;
       const contextFiles = getContextFiles(contextMode);
       const fileCount = contextFiles.length;
