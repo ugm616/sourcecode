@@ -238,7 +238,10 @@ const App = (() => {
 
   function getContextFiles(mode) {
     if (mode === "none") return [];
-    if (mode === "all") return files;
+    if (mode === "all") {
+      const prompts = new Set(PROMPT_FILES);
+      return files.filter((f) => !prompts.has(f.path));
+    }
     const active = Editor.activePath;
     if (!active) return [];
     const live = Editor.getContent(active);
