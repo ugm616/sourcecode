@@ -472,6 +472,82 @@ const App = (() => {
     }
   }
 
+  // ================= upload =================
+  function normalizeUploadPath(path) {
+    return path.replace(/\\/g, "/").replace(/^\.?\/*/, "").replace(/\/+$/g, "");
+  }
+
+  async function importUploadEntries(entries) {
+    if (!entries.length) return;
+    let importedCount = 0;
+    const importedPaths = [];
+    for (const { path, content } of entries) {
+      if (!path) continue;
+      const existing = files.find((f) => f.path === path);
+      if (existing && !confirm(`Replace existing file "${path}"?`)) continue;
+      if (existing) existing.content = content;
+      else files.push({ path, content });
+      await Store.putFile(path, content);
+      importedPaths.push(path);
+      importedCount++;
+    }
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    renderTree();
+    for (const path of importedPaths) {
+      const f = files.find((x) => x.path === path);
+      if (f) Editor.openTab(f.path, f.content);
+    }
+    renderTabs();
+    toast(`Uploaded ${importedCount} file(s)`, "ok");
+    toggleWelcome(files.length === 0);
+  }
+
+  async function uploadFiles(fileList) {
+    const entries = [];
+    for (const file of fileList) {
+      const path = normalizeUploadPath(file.webkitRelativePath || file.name);
+      const content = await file.text();
+      entries.push({ path, content });
+    }
+    await importUploadEntries(entries);
+  }
+
+  async function walk(dirHandle, prefix, entries) {
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === "directory") {
+        await walk(handle, `${prefix}${name}/`, entries);
+      } else {
+        const file = await handle.getFile();
+        const content = await file.text();
+        entries.push({ path: `${prefix}${name}`, content });
+      }
+    }
+  }
+
+  async function uploadFolderModern() {
+    if (!window.showDirectoryPicker) return false;
+    let dir;
+    try {
+      dir = await window.showDirectoryPicker();
+    } catch (e) {
+      if (e.name === "AbortError") return true;
+      throw e;
+    }
+    const entries = [];
+    await walk(dir, "", entries);
+    await importUploadEntries(entries);
+    return true;
+  }
+
+  async function uploadFolderModernOrLegacy() {
+    try {
+      const handled = await uploadFolderModern();
+      if (!handled) $("#upload-folder").click();
+    } catch (e) {
+      toast(`Upload failed: ${e.message}`, "err");
+    }
+  }
+
   // ================= beforeunload guard =================
   function setupUnloadGuard() {
     window.addEventListener("beforeunload", (e) => {
@@ -540,6 +616,52 @@ const App = (() => {
     $("#import-file").addEventListener("change", (e) => {
       if (e.target.files[0]) doImport(e.target.files[0]);
       e.target.value = "";
+    });
+
+    $("#btn-upload").addEventListener("click", () => {
+      const choice = confirm("Click OK to upload a folder, or Cancel to upload individual files.");
+      if (choice) uploadFolderModernOrLegacy();
+      else $("#upload-files").click();
+    });
+    $("#upload-files").addEventListener("change", (e) => {
+      if (e.target.files.length) uploadFiles(e.target.files);
+      e.target.value = "";
+    });
+    $("#upload-folder").addEventListener("change", (e) => {
+      if (e.target.files.length) uploadFiles(e.target.files);
+      e.target.value = "";
+    });
+
+    // drag-and-drop onto sidebar
+    const sidebar = $("#sidebar");
+    sidebar.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      sidebar.classList.add("drag-over");
+    });
+    sidebar.addEventListener("dragleave", (e) => {
+      if (!sidebar.contains(e.relatedTarget)) sidebar.classList.remove("drag-over");
+    });
+    sidebar.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      sidebar.classList.remove("drag-over");
+      const items = Array.from(e.dataTransfer.items || []);
+      const entries = [];
+      for (const item of items) {
+        if (item.kind !== "file") continue;
+        if (item.getAsFileSystemHandle) {
+          const handle = await item.getAsFileSystemHandle();
+          if (handle.kind === "directory") {
+            await walk(handle, handle.name + "/", entries);
+          } else {
+            const file = await handle.getFile();
+            entries.push({ path: normalizeUploadPath(file.name), content: await file.text() });
+          }
+        } else {
+          const file = item.getAsFile();
+          if (file) entries.push({ path: normalizeUploadPath(file.webkitRelativePath || file.name), content: await file.text() });
+        }
+      }
+      if (entries.length) await importUploadEntries(entries);
     });
 
     $("#btn-save-disk").addEventListener("click", saveToDisk);
