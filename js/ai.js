@@ -41,13 +41,16 @@ OUTPUT RULES (very important):
    * onProgress: optional callback ({content, reasoning}) called as chunks arrive
    * Returns {text, filesChanged:[{path,content}]}
    */
-  async function chat({ apiKey, model, history, userMessage, contextFiles, onProgress }) {
+  async function chat({ apiKey, model, history, userMessage, contextFiles, permanentPrompts, onProgress }) {
+    const finalUserMessage = permanentPrompts
+      ? `[Project instructions]\n${permanentPrompts}\n\n${userMessage}`
+      : userMessage;
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       ...history.slice(-20),
       {
         role: "user",
-        content: `${userMessage}\n\n[Workspace files for reference]\n${contextBlock(contextFiles)}`
+        content: `${finalUserMessage}\n\n[Workspace files for reference]\n${contextBlock(contextFiles)}`
       }
     ];
 
