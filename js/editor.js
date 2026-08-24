@@ -37,10 +37,112 @@ const Editor = (() => {
     return monacoReady;
   }
 
+  function defineMonacoThemes() {
+    monaco.editor.defineTheme("ox-amber", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "ffb454", fontStyle: "bold" },
+        { token: "string", foreground: "e8c98a" },
+        { token: "comment", foreground: "7a6649", fontStyle: "italic" },
+        { token: "number", foreground: "ffcd7d" },
+        { token: "type", foreground: "e08d28" },
+        { token: "function", foreground: "ffb454" },
+        { token: "variable", foreground: "e8c98a" }
+      ],
+      colors: {
+        "editor.background": "#0d0b08",
+        "editor.foreground": "#e8c98a",
+        "editorLineNumber.foreground": "#7a6649",
+        "editor.selectionBackground": "#4a3b2880",
+        "editor.lineHighlightBackground": "#1c181380",
+        "editorCursor.foreground": "#ffb454",
+        "editorWidget.background": "#15120e",
+        "editorWidget.border": "#2e2720"
+      }
+    });
+
+    monaco.editor.defineTheme("vs-theme", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "6c8cff", fontStyle: "bold" },
+        { token: "string", foreground: "a8c0ff" },
+        { token: "comment", foreground: "5a6478", fontStyle: "italic" },
+        { token: "number", foreground: "85a1ff" },
+        { token: "type", foreground: "5d7df2" },
+        { token: "function", foreground: "85a1ff" }
+      ],
+      colors: {
+        "editor.background": "#0f1117",
+        "editor.foreground": "#e8eaf0",
+        "editorLineNumber.foreground": "#8b93a3",
+        "editor.selectionBackground": "#3c4a7a80",
+        "editor.lineHighlightBackground": "#1a1e2880",
+        "editorCursor.foreground": "#6c8cff",
+        "editorWidget.background": "#14171f",
+        "editorWidget.border": "#262b36"
+      }
+    });
+
+    monaco.editor.defineTheme("phosphor", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "4ade80", fontStyle: "bold" },
+        { token: "string", foreground: "b7f0c0" },
+        { token: "comment", foreground: "3a6644", fontStyle: "italic" },
+        { token: "number", foreground: "6eed9a" },
+        { token: "type", foreground: "22c55e" },
+        { token: "function", foreground: "4ade80" }
+      ],
+      colors: {
+        "editor.background": "#0a0e0a",
+        "editor.foreground": "#b7f0c0",
+        "editorLineNumber.foreground": "#3a6644",
+        "editor.selectionBackground": "#1a4a2880",
+        "editor.lineHighlightBackground": "#0e130e80",
+        "editorCursor.foreground": "#4ade80",
+        "editorWidget.background": "#0e130e",
+        "editorWidget.border": "#1f2b1f"
+      }
+    });
+
+    monaco.editor.defineTheme("paper", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "keyword", foreground: "8e2f2f", fontStyle: "bold" },
+        { token: "string", foreground: "276748" },
+        { token: "comment", foreground: "9a8c7c", fontStyle: "italic" },
+        { token: "number", foreground: "7a2626" },
+        { token: "type", foreground: "8e2f2f" },
+        { token: "function", foreground: "b03e3e" }
+      ],
+      colors: {
+        "editor.background": "#faf6ee",
+        "editor.foreground": "#1c1a17",
+        "editorLineNumber.foreground": "#9a8c7c",
+        "editor.selectionBackground": "#ccc4b080",
+        "editor.lineHighlightBackground": "#f2ede380",
+        "editorCursor.foreground": "#8e2f2f",
+        "editorWidget.background": "#f2ede3",
+        "editorWidget.border": "#ccc4b0"
+      }
+    });
+  }
+
+  function applyTheme(name) {
+    if (!editorInstance) return;
+    const themeMap = { "ox-amber": "ox-amber", "vs": "vs-theme", "phosphor": "phosphor", "paper": "paper" };
+    monaco.editor.setTheme(themeMap[name] || "ox-amber");
+  }
+
   async function init(el) {
     container = el;
     await loadMonaco();
-    monaco.editor.setTheme("vs-dark");
+    defineMonacoThemes();
+    monaco.editor.setTheme("ox-amber");
     editorInstance = monaco.editor.create(el, {
       value: "",
       language: "plaintext",
@@ -186,7 +288,7 @@ const Editor = (() => {
 
   return {
     init, show, openTab, closeTab, setActiveTab, getModel, getContent, setValue,
-    renameFile, deleteFile, getSessionState, restoreSession,
+    renameFile, deleteFile, getSessionState, restoreSession, applyTheme,
     isDirty: (p) => dirty.has(p),
     isActive: (p) => activePath === p,
     get tabs() { return [...tabs]; },

@@ -33,6 +33,11 @@ const App = (() => {
   }
 
   // ================= settings =================
+  function applyTheme(name) {
+    document.documentElement.setAttribute("data-theme", name || "ox-amber");
+    Editor.applyTheme(name || "ox-amber");
+  }
+
   function getSettings() { return Store.getSettings(); }
 
   function openSettings() {
@@ -42,17 +47,21 @@ const App = (() => {
     $("#set-ghtoken").value = s.ghToken || "";
     $("#set-ghrepo").value = s.ghRepo || "";
     $("#set-ghbranch").value = s.ghBranch || "";
+    $("#set-theme").value = s.theme || "ox-amber";
     $("#settings-modal").showModal();
   }
 
   function saveSettingsFromForm() {
+    const theme = $("#set-theme").value;
     Store.saveSettings({
       apiKey: $("#set-apikey").value.trim(),
       model: $("#set-model").value.trim() || AI.DEFAULT_MODEL,
       ghToken: $("#set-ghtoken").value.trim(),
       ghRepo: $("#set-ghrepo").value.trim(),
-      ghBranch: $("#set-ghbranch").value.trim()
+      ghBranch: $("#set-ghbranch").value.trim(),
+      theme
     });
+    applyTheme(theme);
     updateConnStatus();
     toast("Settings saved", "ok");
   }
@@ -646,6 +655,7 @@ const App = (() => {
 
     renderTree();
     updateConnStatus();
+    applyTheme((getSettings().theme) || "ox-amber");
     setupUnloadGuard();
 
     // wire up events

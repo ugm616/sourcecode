@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="ox-amber">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -116,6 +116,15 @@
     </label>
     <label>Branch
       <input type="text" id="set-ghbranch" placeholder="main">
+    </label>
+    <hr>
+    <label>Theme
+      <select id="set-theme" style="width:100%;margin-top:5px;padding:8px 11px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;">
+        <option value="ox-amber">Ox Amber (default)</option>
+        <option value="vs">VS (blue-purple)</option>
+        <option value="phosphor">Phosphor (green terminal)</option>
+        <option value="paper">Paper (light)</option>
+      </select>
     </label>
     <menu>
       <button value="cancel" class="btn">Cancel</button>
