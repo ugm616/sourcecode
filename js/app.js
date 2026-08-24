@@ -239,7 +239,8 @@ const App = (() => {
     if (!active) return [];
     const live = Editor.getContent(active);
     const f = files.find((x) => x.path === active);
-    const content = live !== null ? live : (f ? f.content : "");
+    if (live === null && !f) return [];
+    const content = live !== null ? live : f.content;
     return [{ path: active, content }];
   }
 
