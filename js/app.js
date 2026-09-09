@@ -40,20 +40,42 @@ const App = (() => {
 
   function getSettings() { return Store.getSettings(); }
 
+  function getProviderMeta(providerId) {
+    return AI.getProvider(providerId || getSettings().provider);
+  }
+
+  function updateProviderUI(providerId) {
+    const provider = getProviderMeta(providerId);
+    const label = $("#api-key-label");
+    const help = $("#api-key-help");
+    const welcome = $("#welcome-provider-copy");
+    if (label) label.textContent = `${provider.name} API key`;
+    if (help) {
+      help.innerHTML = `Get a key at <a href="${provider.keyUrl}" target="_blank" rel="noopener">${provider.keyUrl.replace(/^https?:\/\//, "")}</a>. Stored only in your browser's localStorage.`;
+    }
+    if (welcome) {
+      welcome.innerHTML = `Your browser-based coding workspace, powered by Ox&nbsp;Alpha via ${provider.name}.`;
+    }
+  }
+
   function openSettings() {
     const s = getSettings();
+    $("#set-provider").value = s.provider || "openrouter";
     $("#set-apikey").value = s.apiKey || "";
     $("#set-model").value = s.model || AI.DEFAULT_MODEL;
     $("#set-ghtoken").value = s.ghToken || "";
     $("#set-ghrepo").value = s.ghRepo || "";
     $("#set-ghbranch").value = s.ghBranch || "";
     $("#set-theme").value = s.theme || "ox-amber";
+    updateProviderUI(s.provider);
     $("#settings-modal").showModal();
   }
 
   function saveSettingsFromForm() {
     const theme = $("#set-theme").value;
+    const provider = $("#set-provider").value || "openrouter";
     Store.saveSettings({
+      provider,
       apiKey: $("#set-apikey").value.trim(),
       model: $("#set-model").value.trim() || AI.DEFAULT_MODEL,
       ghToken: $("#set-ghtoken").value.trim(),
@@ -62,18 +84,20 @@ const App = (() => {
       theme
     });
     applyTheme(theme);
+    updateProviderUI(provider);
     updateConnStatus();
     toast("Settings saved", "ok");
   }
 
   function updateConnStatus() {
     const s = getSettings();
+    const provider = getProviderMeta(s.provider);
     const el = $("#status-conn");
     if (s.apiKey) {
-      el.textContent = "\u2713 Connected";
+      el.textContent = `✓ ${provider.name} connected`;
       el.className = "ok";
     } else {
-      el.innerHTML = "No API key &#8212; open Settings";
+      el.innerHTML = `No ${provider.name} API key &#8212; open Settings`;
       el.className = "warn";
     }
     $("#status-model").textContent = s.model || AI.DEFAULT_MODEL;
@@ -267,8 +291,9 @@ const App = (() => {
     if (!text) return;
 
     const s = getSettings();
+    const provider = getProviderMeta(s.provider);
     if (!s.apiKey) {
-      toast("Add your free OpenRouter API key in Settings first", "err");
+      toast(`Add your ${provider.name} API key in Settings first`, "err");
       openSettings();
       return;
     }
@@ -280,7 +305,7 @@ const App = (() => {
     $("#btn-send").disabled = true;
     const statusEl = $("#chat-status");
     statusEl.classList.remove("hidden");
-    statusEl.textContent = "Contacting model\u2026";
+    statusEl.textContent = `Contacting ${provider.name}\u2026`;
 
     try {
       await refreshFiles();
@@ -296,13 +321,15 @@ const App = (() => {
       const { text: reply, filesChanged } = await AI.chat({
         apiKey: s.apiKey,
         model: s.model,
+        baseUrl: provider.endpoint,
+        provider: provider.id,
         history: chatHistory,
         userMessage: text,
         contextFiles,
         permanentPrompts,
         onProgress: (state) => {
           statusEl.textContent =
-            `${AI.describeProgress(state)}  \u00b7  ${s.model}, ${fileCount} file${fileCount === 1 ? "" : "s"} of context`;
+            `${AI.describeProgress(state)}  ·  ${provider.name}, ${s.model || AI.DEFAULT_MODEL}, ${fileCount} file${fileCount === 1 ? "" : "s"} of context`;
         }
       });
 
@@ -654,6 +681,7 @@ const App = (() => {
     }
 
     renderTree();
+    updateProviderUI(getSettings().provider);
     updateConnStatus();
     applyTheme((getSettings().theme) || "ox-amber");
     setupUnloadGuard();
@@ -668,6 +696,7 @@ const App = (() => {
     });
 
     $("#btn-settings").addEventListener("click", openSettings);
+    $("#set-provider").addEventListener("change", (e) => updateProviderUI(e.target.value));
     $("#btn-prompts").addEventListener("click", openPromptsModal);
     $("#btn-prompts-save").addEventListener("click", savePromptsModal);
     $("#btn-prompts-close").addEventListener("click", () => $("#prompts-modal").close());
@@ -774,7 +803,8 @@ const App = (() => {
     if (!getSettings().apiKey && !localStorage.getItem("sc_seen_intro")) {
       localStorage.setItem("sc_seen_intro", "1");
       setTimeout(() => {
-        toast("Welcome! Add a free OpenRouter API key in Settings to use the AI agent.");
+        const provider = getProviderMeta(getSettings().provider);
+        toast(`Welcome! Add your ${provider.name} API key in Settings to use the AI agent.`);
       }, 800);
     }
 

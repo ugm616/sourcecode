@@ -1,9 +1,24 @@
-// ai.js - OpenRouter streaming chat client for the Ox Alpha agent
+// ai.js - streaming chat client for the Ox Alpha agent
 "use strict";
 
 const AI = (() => {
-  const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
   const DEFAULT_MODEL = "stealth/ox-alpha";
+  const PROVIDERS = {
+    openrouter: {
+      id: "openrouter",
+      name: "OpenRouter",
+      endpoint: "https://openrouter.ai/api/v1/chat/completions",
+      keyUrl: "https://openrouter.ai/keys",
+      defaultModel: DEFAULT_MODEL
+    },
+    tokenra: {
+      id: "tokenra",
+      name: "Tokenra",
+      endpoint: "https://tokenra.io/v1/chat/completions",
+      keyUrl: "https://tokenra.io",
+      defaultModel: DEFAULT_MODEL
+    }
+  };
 
   const SYSTEM_PROMPT = `You are the SourceCode coding agent, embedded in a browser IDE.
 The user has a virtual workspace of text files. You can create or modify files.
@@ -17,14 +32,20 @@ OUTPUT RULES (very important):
 - Keep prose brief: explain what you did in a few bullet points after the code blocks.
 - If you only need to answer a question, just answer normally without file blocks.`;
 
-  function buildHeaders(apiKey) {
-    return {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      // optional attribution headers; harmless if blank
-      "HTTP-Referer": location.origin,
-      "X-Title": "SourceCode"
+  function getProvider(providerId) {
+    return PROVIDERS[providerId] || PROVIDERS.openrouter;
+  }
+
+  function buildHeaders(apiKey, providerId) {
+    const headers = {
+      "Authorization": "Bearer " + apiKey,
+      "Content-Type": "application/json"
     };
+    if (getProvider(providerId).id === "openrouter") {
+      headers["HTTP-Referer"] = location.origin;
+      headers["X-Title"] = "SourceCode";
+    }
+    return headers;
   }
 
   function contextBlock(files) {
@@ -41,7 +62,8 @@ OUTPUT RULES (very important):
    * onProgress: optional callback ({content, reasoning}) called as chunks arrive
    * Returns {text, filesChanged:[{path,content}]}
    */
-  async function chat({ apiKey, model, history, userMessage, contextFiles, permanentPrompts, onProgress }) {
+  async function chat({ apiKey, model, baseUrl, provider, history, userMessage, contextFiles, permanentPrompts, onProgress }) {
+    const providerMeta = getProvider(provider);
     const systemContent = permanentPrompts
       ? `${SYSTEM_PROMPT}\n\n[Project instructions]\n${permanentPrompts}`
       : SYSTEM_PROMPT;
@@ -54,9 +76,9 @@ OUTPUT RULES (very important):
       }
     ];
 
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(baseUrl || providerMeta.endpoint, {
       method: "POST",
-      headers: buildHeaders(apiKey),
+      headers: buildHeaders(apiKey, providerMeta.id),
       body: JSON.stringify({
         model: model || DEFAULT_MODEL,
         messages,
@@ -71,7 +93,7 @@ OUTPUT RULES (very important):
         const err = await res.json();
         detail = err.error ? err.error.message : JSON.stringify(err);
       } catch { /* ignore */ }
-      throw new Error(`OpenRouter ${res.status}: ${detail || res.statusText}`);
+      throw new Error(`${providerMeta.name} ${res.status}: ${detail || res.statusText}`);
     }
 
     // ---- consume the SSE stream ----
@@ -166,5 +188,5 @@ OUTPUT RULES (very important):
       .trim();
   }
 
-  return { chat, describeProgress, extractFileBlocks, stripFileBlocks, DEFAULT_MODEL };
+  return { chat, describeProgress, extractFileBlocks, stripFileBlocks, DEFAULT_MODEL, PROVIDERS, getProvider };
 })();

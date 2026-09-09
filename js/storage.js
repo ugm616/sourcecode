@@ -42,6 +42,12 @@ const Store = (() => {
     });
   }
 
+  function normalizeSettings(obj) {
+    const settings = (obj && typeof obj === "object") ? { ...obj } : {};
+    if (typeof settings.provider !== "string" || !settings.provider) settings.provider = "openrouter";
+    return settings;
+  }
+
   return {
     async putFile(path, content) {
       await tx("readwrite", (s) => s.put({ path, content }));
@@ -68,11 +74,11 @@ const Store = (() => {
 
     // ---- settings (localStorage) ----
     getSettings() {
-      try { return JSON.parse(localStorage.getItem("sc_settings") || "{}"); }
-      catch { return {}; }
+      try { return normalizeSettings(JSON.parse(localStorage.getItem("sc_settings") || "{}")); }
+      catch { return normalizeSettings({}); }
     },
     saveSettings(obj) {
-      localStorage.setItem("sc_settings", JSON.stringify(obj));
+      localStorage.setItem("sc_settings", JSON.stringify(normalizeSettings(obj)));
     },
 
     // ---- tabs / session state (localStorage) ----

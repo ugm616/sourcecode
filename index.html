@@ -55,7 +55,7 @@
       <div id="editor-container"></div>
       <div id="welcome" class="hidden">
         <h1><i>SOURCE:CODE</i></h1>
-        <p>Your browser-based coding workspace, powered by Ox&nbsp;Alpha via OpenRouter.</p>
+        <p id="welcome-provider-copy">Your browser-based coding workspace, powered by Ox&nbsp;Alpha via OpenRouter.</p>
         <ul>
           <li>Create a file with <b>+ File</b>, then just start coding.</li>
           <li>Ask the AI agent on the right to write or change code for you.</li>
@@ -99,9 +99,15 @@
 <dialog id="settings-modal">
   <form method="dialog" id="settings-form">
     <h2>Settings</h2>
-    <label>OpenRouter API key
+    <label>Provider
+      <select id="set-provider" style="width:100%;margin-top:5px;padding:8px 11px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;">
+        <option value="openrouter">OpenRouter</option>
+        <option value="tokenra">Tokenra</option>
+      </select>
+    </label>
+    <label><span id="api-key-label">OpenRouter API key</span>
       <input type="password" id="set-apikey" placeholder="sk-or-v1-..." autocomplete="off">
-      <small>Free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Stored only in your browser's localStorage.</small>
+      <small id="api-key-help">Free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Stored only in your browser's localStorage.</small>
     </label>
     <label>Model ID
       <input type="text" id="set-model" placeholder="stealth/ox-alpha">
